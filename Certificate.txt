@@ -1,0 +1,170 @@
+index.html
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Certificate DApp</title>
+</head>
+<body>
+
+<h2>🎓 Certificate System</h2>
+
+<button onclick="connectWallet()">🔌 Connect Wallet</button>
+
+<h3>Issue Certificate (Admin only)</h3>
+<input id="id" placeholder="ID"><br><br>
+<input id="name" placeholder="Name"><br><br>
+<input id="course" placeholder="Course"><br><br>
+<input id="grade" placeholder="Grade"><br><br>
+<input id="date" placeholder="Date"><br><br>
+<button onclick="issue()">Issue Certificate</button>
+
+<h3>Get Certificate</h3>
+<input id="searchId" placeholder="Enter ID"><br><br>
+<button onclick="getCert()">Get Certificate</button>
+
+<p id="output"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+
+<script>
+
+let contract;
+
+// 🔴 Replace with your deployed contract address
+const address = "YOUR_CONTRACT_ADDRESS";
+
+// ✅ ABI (only needed functions)
+const abi = [
+    "function issueCertificate(uint256,string,string,string,string)",
+    "function getCertificate(uint256) view returns (string,string,string,string)"
+];
+
+// 🔌 Connect Wallet
+async function connectWallet() {
+    if (window.ethereum) {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        document.getElementById("output").innerText = "Wallet Connected";
+    } else {
+        alert("Install MetaMask");
+    }
+}
+
+// ⚙️ Load Contract
+async function loadContract() {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    contract = new ethers.Contract(address, abi, signer);
+}
+
+// 🎓 Issue Certificate
+async function issue() {
+    await loadContract();
+
+    const id = document.getElementById("id").value;
+    const name = document.getElementById("name").value;
+    const course = document.getElementById("course").value;
+    const grade = document.getElementById("grade").value;
+    const date = document.getElementById("date").value;
+
+    try {
+        const tx = await contract.issueCertificate(id, name, course, grade, date);
+        document.getElementById("output").innerText = "⏳ Waiting...";
+        await tx.wait();
+
+        document.getElementById("output").innerText = "✅ Certificate Issued!";
+    } catch (err) {
+        document.getElementById("output").innerText = "❌ Error: " + err.message;
+    }
+}
+
+// 🔍 Get Certificate
+async function getCert() {
+    await loadContract();
+
+    const id = document.getElementById("searchId").value;
+
+    try {
+        const data = await contract.getCertificate(id);
+
+        document.getElementById("output").innerText =
+            "Name: " + data[0] + "\n" +
+            "Course: " + data[1] + "\n" +
+            "Grade: " + data[2] + "\n" +
+            "Date: " + data[3];
+
+    } catch (err) {
+        document.getElementById("output").innerText = "❌ Error fetching data";
+    }
+}
+
+</script>
+
+</body>
+</html>
+
+
+--------------------------------------------------------------------------------------------------
+
+certificate.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract Certificate {
+
+    // Admin address
+    address public admin;
+
+    // Constructor - sets deployer as admin
+    constructor() {
+        admin = msg.sender;
+    }
+
+    // Certificate structure
+    struct CertificateData {
+        string name;
+        string course;
+        string grade;
+        string date;
+    }
+
+ // Mapping to store certificates using ID
+    mapping(uint256 => CertificateData) public certificates;
+
+    // Modifier to restrict access
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Access Denied");
+        _;
+    }
+   
+    // Function to issue certificate (only admin)
+    function issueCertificate(
+        uint256 _id,
+        string memory _name,
+        string memory _course,
+        string memory _grade,
+        string memory _date
+    ) public onlyAdmin {
+        certificates[_id] = CertificateData(
+            _name,
+            _course,
+            _grade,
+            _date
+        );
+    }
+
+    // Function to get certificate details
+    function getCertificate(uint256 _id) public view  returns (
+            string memory,
+            string memory,
+            string memory,
+            string memory
+        )
+    {
+        CertificateData memory cert = certificates[_id];
+        return (cert.name, cert.course, cert.grade, cert.date);
+    }
+}
+
+
