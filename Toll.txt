@@ -1,0 +1,132 @@
+index.html
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Toll System</title>
+</head>
+<body>
+
+<h2>Smart Toll System</h2>
+
+<button onclick="connectWallet()">Connect MetaMask</button>
+<p id="account"></p>
+
+<hr>
+
+<h3>Add Balance</h3>
+<input id="amount" placeholder="Enter ETH">
+<button onclick="addBalance()">Add</button>
+
+<hr>
+
+<h3>Pay Toll</h3>
+<button onclick="payToll()">Enter Toll Gate</button>
+
+<hr>
+
+<h3>Check Balance</h3>
+<button onclick="getBalance()">Get Balance</button>
+
+<p id="output"></p>
+
+<!-- ✅ Correct ethers -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+
+<script>
+
+let provider, signer, contract;
+
+// 👉 Replace after deploying
+const contractAddress = "0x7AafBfa538558f91b046915a301FC8031E89bEFa";
+
+// 👉 ABI (from Remix)
+const abi = [];
+
+// 🔗 Connect Wallet
+async function connectWallet() {
+    if (window.ethereum) {
+        provider = new ethers.ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+
+        const address = await signer.getAddress();
+        document.getElementById("account").innerText = "Connected: " + address;
+
+        contract = new ethers.ethers.Contract(contractAddress, abi, signer);
+    } else {
+        alert("Install MetaMask");
+    }
+}
+
+// 💰 Add balance
+async function addBalance() {
+    const amount = document.getElementById("amount").value;
+
+    const tx = await contract.addBalance({
+        value: ethers.ethers.utils.parseEther(amount)
+    });
+
+    await tx.wait();
+    alert("Balance Added");
+}
+
+// 🚗 Pay toll
+async function payToll() {
+    const tx = await contract.payToll();
+    await tx.wait();
+
+    alert("Toll Paid");
+}
+
+// 📊 Get balance
+async function getBalance() {
+    const bal = await contract.getBalance();
+
+    document.getElementById("output").innerText =
+        "Balance: " + ethers.ethers.utils.formatEther(bal) + " ETH";
+}
+
+</script>
+
+</body>
+</html>
+
+
+
+----------------------------------------------------------------------
+
+voting.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract TollSystem {
+
+    mapping(address => uint) public balances;
+
+    uint public tollAmount = 1 ether; // toll fee
+
+    event BalanceAdded(address user, uint amount);
+    event TollPaid(address vehicle, uint amount);
+
+    // Add balance (like recharge)
+    function addBalance() public payable {
+        balances[msg.sender] += msg.value;
+        emit BalanceAdded(msg.sender, msg.value);
+    }
+
+    // Simulate vehicle entry (deduct toll)
+    function payToll() public {
+        require(balances[msg.sender] >= tollAmount, "Insufficient balance");
+
+        balances[msg.sender] -= tollAmount;
+
+        emit TollPaid(msg.sender, tollAmount);
+    }
+
+    // Check balance
+    function getBalance() public view returns (uint) {
+        return balances[msg.sender];
+    }
+}
+
