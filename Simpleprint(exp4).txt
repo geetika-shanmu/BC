@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
+
+// Creating a contract
+contract Test {
+
+    // Defining a function
+    function getOutput() public pure returns (string memory) {
+        return "Hi, your contract ran successfully";
+    }
+}
