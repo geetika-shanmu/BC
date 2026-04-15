@@ -1,0 +1,179 @@
+Land.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract LandRegistration {
+
+    struct Land {
+        string state;
+        string district;
+        string village;
+        uint surveyNumber;
+        address owner;
+    }
+
+    mapping(uint => Land) public lands;
+
+    event LandRegistered(uint id, address owner);
+
+    // Register land
+    function registerLand(
+        uint id,
+        string memory _state,
+        string memory _district,
+        string memory _village,
+        uint _surveyNumber
+    ) public {
+        lands[id] = Land(_state, _district, _village, _surveyNumber, msg.sender);
+        emit LandRegistered(id, msg.sender);
+    }
+
+    // Get land details
+    function getLand(uint id) public view returns (
+        string memory, string memory, string memory, uint, address
+    ) {
+        Land memory l = lands[id];
+        return (l.state, l.district, l.village, l.surveyNumber, l.owner);
+    }
+}
+
+
+
+-----------------------------------------------------------------------
+
+
+index.html
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Land Registration DApp</title>
+</head>
+<body>
+
+
+<h2>Land Registration</h2>
+
+
+<button onclick="connectWallet()">Connect MetaMask</button>
+<p id="account"></p>
+
+
+<hr>
+
+
+<h3>Register Land</h3>
+
+
+<input id="id" placeholder="ID"><br><br>
+<input id="state" placeholder="State"><br><br>
+<input id="district" placeholder="District"><br><br>
+<input id="village" placeholder="Village"><br><br>
+<input id="survey" placeholder="Survey Number"><br><br>
+
+
+<button onclick="registerLand()">Register</button>
+
+
+<hr>
+
+
+<h3>Get Land Details</h3>
+
+
+<input id="getId" placeholder="Enter ID"><br><br>
+<button onclick="getLand()">Get Details</button>
+
+
+<p id="output"></p>
+
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+<script>
+
+
+let provider;
+let signer;
+let contract;
+
+
+// 👉 Paste your contract address here
+const contractAddress = "";
+
+
+// 👉 Paste your ABI here
+const abi = ;
+
+
+// 🔗 Connect Wallet
+async function connectWallet() {
+    if (window.ethereum) {
+        try {
+            provider = new ethers.ethers.providers.Web3Provider(window.ethereum);
+
+
+            await provider.send("eth_requestAccounts", []);
+
+
+            signer = provider.getSigner();
+
+
+            let address = await signer.getAddress();
+            document.getElementById("account").innerText = "Connected: " + address;
+
+
+            contract = new ethers.ethers.Contract(contractAddress, abi, signer);
+
+
+        } catch (err) {
+            console.error(err);
+            alert("Connection failed");
+        }
+    } else {
+        alert("Install MetaMask!");
+    }
+}
+
+
+
+
+// 📝 Register Land
+async function registerLand() {
+    const id = document.getElementById("id").value;
+    const state = document.getElementById("state").value;
+    const district = document.getElementById("district").value;
+    const village = document.getElementById("village").value;
+    const survey = document.getElementById("survey").value;
+
+
+    const tx = await contract.registerLand(id, state, district, village, survey);
+    await tx.wait();
+
+
+    alert("Land Registered!");
+}
+
+
+// 🔍 Get Land
+async function getLand() {
+    const id = document.getElementById("getId").value;
+
+
+    const result = await contract.getLand(id);
+
+
+    document.getElementById("output").innerText =
+        "State: " + result[0] +
+        ", District: " + result[1] +
+        ", Village: " + result[2] +
+        ", Survey No: " + result[3] +
+        ", Owner: " + result[4];
+}
+
+
+</script>
+
+
+</body>
+</html>
