@@ -1,1 +1,163 @@
+Voting.sol
+
+pragma solidity ^0.8.7;
+contract Voting {
+    struct Candidate {
+        uint id;
+        string name;
+        uint voteCount;
+    }
+
+
+    mapping(uint => Candidate) public candidates;
+    mapping(address => bool) public voters;
+    uint[] public candidateIds;
+    event Voted(uint indexed candidateId);
+    constructor(string[] memory _candidateNames) {
+        for (uint i = 0; i < _candidateNames.length; i++) {
+            addCandidate(_candidateNames[i]);
+        }
+    }
+
+
+    function addCandidate(string memory _name) private {
+        uint id = candidateIds.length;
+        candidates[id] = Candidate(id, _name, 0);
+        candidateIds.push(id);
+    }
+
+
+    function vote(uint _candidateId) public {
+        require(!voters[msg.sender], "Already voted");
+        require(_candidateId < candidateIds.length, "Invalid ID");
+
+
+        candidates[_candidateId].voteCount++;
+        voters[msg.sender] = true;
+
+
+        emit Voted(_candidateId);
+    }
+
+
+    function getCandidateCount() public view returns (uint) {
+        return candidateIds.length;
+    }
+
+
+    function getCandidate(uint _candidateId) public view returns (string memory, uint) {
+        return (candidates[_candidateId].name, candidates[_candidateId].voteCount);
+    }
+}
+
+_______________________________________________________________________________________________________________________________________
+
+index.html
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voting DApp</title>
+</head>
+<body>
+
+
+<h2>🗳️ Voting System</h2>
+
+
+<!-- Connect Wallet -->
+<button onclick="connectWallet()">🔌 Connect MetaMask</button>
+
+
+<h3>Vote:</h3>
+<button onclick="vote(0)">Vote Alice</button>
+<button onclick="vote(1)">Vote Bob</button>
+<button onclick="vote(2)">Vote Charlie</button>
+
+
+<h3>Check Results:</h3>
+<button onclick="getResult(0)">Alice Votes</button>
+<button onclick="getResult(1)">Bob Votes</button>
+<button onclick="getResult(2)">Charlie Votes</button>
+
+
+<p id="result"></p>
+
+
+<script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+
+
+<script>
+let contract;
+
+
+// ✅ Your contract address
+const contractAddress = "0x3B968b2ECB5f249Fb2BC8E5B5Cb916CBF66a2fd9";
+
+
+// ✅ Your ABI (already correct)
+const abi = [/* KEEP YOUR FULL ABI HERE (unchanged) */];
+
+
+// 🔌 Connect MetaMask
+async function connectWallet() {
+    if (typeof window.ethereum !== "undefined") {
+        try {
+            await window.ethereum.request({ method: "eth_requestAccounts" });
+            document.getElementById("result").innerText = "✅ MetaMask Connected";
+        } catch (err) {
+            document.getElementById("result").innerText = "❌ Connection Failed";
+        }
+    } else {
+        alert("❌ Please install MetaMask");
+    }
+}
+
+
+// ⚙️ Connect contract
+async function connectContract() {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    contract = new ethers.Contract(contractAddress, abi, signer);
+}
+
+
+// 🗳️ Vote function
+async function vote(id) {
+    await connectContract();
+
+
+    try {
+        const tx = await contract.vote(id);
+        document.getElementById("result").innerText = "⏳ Waiting for confirmation...";
+        await tx.wait();
+
+
+        document.getElementById("result").innerText = "✅ Vote cast successfully!";
+    } catch (err) {
+        document.getElementById("result").innerText = "❌ Error: " + err.reason;
+    }
+}
+
+
+// 📊 Get candidate result
+async function getResult(id) {
+    await connectContract();
+
+
+    try {
+        const data = await contract.getCandidate(id);
+
+
+        document.getElementById("result").innerText =
+            data[0] + " has " + data[1] + " votes";
+    } catch (err) {
+        document.getElementById("result").innerText = "❌ Error fetching result";
+    }
+}
+</script>
+
+
+</body>
+</html>
 
