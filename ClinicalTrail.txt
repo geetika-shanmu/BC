@@ -1,0 +1,131 @@
+ClinicalTrail.sol
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract ClinicalTrial {
+
+    address public admin;
+
+    struct Trial {
+        string dataHash;
+        address uploadedBy;
+    }
+
+    mapping(uint => Trial) public trials;
+
+    mapping(address => bool) public authorized;
+
+    event DataStored(uint id, string hash, address user);
+
+    constructor() {
+        admin = msg.sender;
+        authorized[msg.sender] = true;
+    }
+
+    // 🔐 Only authorized users
+    modifier onlyAuthorized() {
+        require(authorized[msg.sender], "Not authorized");
+        _;
+    }
+
+    // ➕ Add authorized user
+    function addUser(address user) public {
+        require(msg.sender == admin, "Only admin");
+        authorized[user] = true;
+    }
+
+    // 🧪 Store hash of patient data
+    function storeData(uint id, string memory hash) public onlyAuthorized {
+        trials[id] = Trial(hash, msg.sender);
+        emit DataStored(id, hash, msg.sender);
+    }
+
+    // 🔍 Get data hash
+    function getData(uint id) public view returns (string memory, address) {
+        Trial memory t = trials[id];
+        return (t.dataHash, t.uploadedBy);
+    }
+}
+
+
+
+-------------------------------------------------------------------------
+
+index.html
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clinical Trial DApp</title>
+</head>
+<body>
+
+<h2>🧪 Clinical Trial System</h2>
+
+<button onclick="connectWallet()">Connect MetaMask</button>
+<p id="account"></p>
+
+<hr>
+
+<h3>Store Patient Data Hash</h3>
+<input id="trialId" placeholder="Trial ID"><br><br>
+<input id="hash" placeholder="Data Hash"><br><br>
+<button onclick="storeData()">Store</button>
+
+<hr>
+
+<h3>Get Trial Data</h3>
+<input id="getId" placeholder="Trial ID"><br><br>
+<button onclick="getData()">Get</button>
+
+<p id="output"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.0/dist/ethers.umd.min.js"></script>
+
+<script>
+
+let provider, signer, contract;
+
+const contractAddress = "0xb2Ba22Eb9661a047Ac70E78064925a07fE7d7D9d";
+
+const abi = [ ];
+
+// 🔗 Connect Wallet
+async function connectWallet() {
+    provider = new ethers.ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = provider.getSigner();
+
+    const address = await signer.getAddress();
+    document.getElementById("account").innerText = "Connected: " + address;
+
+    contract = new ethers.ethers.Contract(contractAddress, abi, signer);
+}
+
+// 🧪 Store data hash
+async function storeData() {
+    const id = document.getElementById("trialId").value;
+    const hash = document.getElementById("hash").value;
+
+    const tx = await contract.storeData(id, hash);
+    await tx.wait();
+
+    alert("Data stored on blockchain");
+}
+
+// 🔍 Get data
+async function getData() {
+    const id = document.getElementById("getId").value;
+
+    const data = await contract.getData(id);
+
+    document.getElementById("output").innerText =
+        "Hash: " + data[0] +
+        "\nUploaded by: " + data[1];
+}
+
+</script>
+
+</body>
+</html>
